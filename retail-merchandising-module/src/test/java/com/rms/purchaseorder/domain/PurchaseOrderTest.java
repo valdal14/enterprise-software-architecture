@@ -10,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class PurchaseOrderTest {
 
     @Test
-    void approveSuccessfullyApprovedPurchaseOrder() {
+    void approveSuccessfullyApprovesPurchaseOrderWhenTotalAmountIsLessThanSeasonalBudget() {
         // ARRANGE
         UUID id = UUID.randomUUID();
         OrderStatus expectedOrderStatus = OrderStatus.APPROVED;
@@ -31,6 +31,19 @@ class PurchaseOrderTest {
         // ACT & ASSERT
         assertThrows(BudgetExceededException.class, () -> purchaseOrder.approve(BigDecimal.valueOf(100.00)));
         assertEquals(expectedOrderStatus, purchaseOrder.getOrderStatus());
+    }
+
+    @Test
+    void approveSuccessfullyApprovesPurchaseOrderWhenTotalAmountIsEqualThanSeasonalBudget() {
+        // ARRANGE
+        UUID id = UUID.randomUUID();
+        OrderStatus expectedOrderStatus = OrderStatus.APPROVED;
+        PurchaseOrder purchaseOrder = makeSUT(id, BigDecimal.valueOf(300.00));
+        // ACT
+        purchaseOrder.approve(BigDecimal.valueOf(300.00));
+        // ASSERT
+        OrderStatus currentStatus = purchaseOrder.getOrderStatus();
+        assertEquals(expectedOrderStatus, currentStatus);
     }
 
     private PurchaseOrder makeSUT(UUID orderId, BigDecimal totalAmount) {
