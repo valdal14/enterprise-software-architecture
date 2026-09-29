@@ -30,13 +30,21 @@ class PurchaseOrderServiceTest {
     void executeSuccessfullyProcessPurchaseOrder() {
         // ARRANGE
         UUID orderId = UUID.randomUUID();
-        BigDecimal orderAmount = BigDecimal.valueOf(300);
+        BigDecimal orderAmount = BigDecimal.valueOf(200);
+        PurchaseOrder expectedPurchaseOrder = new PurchaseOrder(orderId, orderAmount, OrderStatus.APPROVED);
+
         SaveService saveService = new SaveService();
+
         PurchaseOrderService service = makeSUT(new LoadService(true), saveService);
         // ACT
-        service.execute(orderId,  orderAmount);
+        service.execute(expectedPurchaseOrder.getOrderId(),  expectedPurchaseOrder.getTotalAmount());
         // VERIFY
-        assertTrue(saveService.verifyCall);
+        assertAll(
+                () -> assertTrue(saveService.verifyCall),
+                () -> assertEquals(expectedPurchaseOrder.getOrderId(), saveService.capturedOrder.getOrderId()),
+                () -> assertEquals(expectedPurchaseOrder.getTotalAmount(), saveService.capturedOrder.getTotalAmount()),
+                () -> assertEquals(expectedPurchaseOrder.getOrderStatus(), saveService.capturedOrder.getOrderStatus())
+        );
     }
 
     /**
@@ -74,6 +82,7 @@ class PurchaseOrderServiceTest {
     @Getter
     private static class SaveService implements SavePurchaseOrderPort {
         private boolean verifyCall;
+        private PurchaseOrder capturedOrder;
 
         @Override
         public void save(PurchaseOrder purchaseOrder) {
@@ -81,6 +90,7 @@ class PurchaseOrderServiceTest {
             System.out.println("Saving purchase order amount: " + purchaseOrder.getTotalAmount());
             System.out.println("Saving purchase order status: " + purchaseOrder.getOrderStatus());
             verifyCall = true;
+            capturedOrder = purchaseOrder;
         }
     }
 }
