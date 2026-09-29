@@ -22,6 +22,17 @@ class PurchaseOrderTest {
         assertEquals(expectedOrderStatus, currentStatus);
     }
 
+    @Test
+    void approveThrowsExceptionWhenTotalAmountIsGreaterThanSeasonalBudget() {
+        // ARRANGE
+        UUID id = UUID.randomUUID();
+        OrderStatus expectedOrderStatus = OrderStatus.REJECTED;
+        PurchaseOrder purchaseOrder = makeSUT(id, BigDecimal.valueOf(300.00));
+        // ACT & ASSERT
+        assertThrows(BudgetExceededException.class, () -> purchaseOrder.approve(BigDecimal.valueOf(100.00)));
+        assertEquals(expectedOrderStatus, purchaseOrder.getOrderStatus());
+    }
+
     private PurchaseOrder makeSUT(UUID orderId, BigDecimal totalAmount) {
         return new PurchaseOrder(orderId, totalAmount, OrderStatus.DRAFT);
     }
