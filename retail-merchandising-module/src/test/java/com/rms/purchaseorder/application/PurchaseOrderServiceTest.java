@@ -67,10 +67,8 @@ class PurchaseOrderServiceTest {
         @Override
         public Optional<PurchaseOrder> load(UUID orderId) {
             if (found) {
-                System.out.println("Order with id: " + orderId + " found");
                 return Optional.of(new PurchaseOrder(orderId, BigDecimal.valueOf(200), OrderStatus.DRAFT));
             } else {
-                System.out.println("Order Not Found");
                 return Optional.empty();
             }
         }
@@ -86,9 +84,6 @@ class PurchaseOrderServiceTest {
 
         @Override
         public void save(PurchaseOrder purchaseOrder) {
-            System.out.println("Saving purchase order with id: " + purchaseOrder.getOrderId());
-            System.out.println("Saving purchase order amount: " + purchaseOrder.getTotalAmount());
-            System.out.println("Saving purchase order status: " + purchaseOrder.getOrderStatus());
             verifyCall = true;
             capturedOrder = purchaseOrder;
         }
