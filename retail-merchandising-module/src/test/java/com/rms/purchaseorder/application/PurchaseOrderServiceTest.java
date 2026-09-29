@@ -26,6 +26,19 @@ class PurchaseOrderServiceTest {
         assertThrows(IllegalArgumentException.class, () -> service.execute(orderId,  orderAmount));
     }
 
+    @Test
+    void executeSuccessfullyProcessPurchaseOrder() {
+        // ARRANGE
+        UUID orderId = UUID.randomUUID();
+        BigDecimal orderAmount = BigDecimal.valueOf(300);
+        SaveService saveService = new SaveService();
+        PurchaseOrderService service = makeSUT(new LoadService(true), saveService);
+        // ACT
+        service.execute(orderId,  orderAmount);
+        // VERIFY
+        assertTrue(saveService.verifyCall);
+    }
+
     /**
      * Helper method used to create the system under test
      * @param load: A LoadPurchaseOrderPort type
@@ -60,13 +73,14 @@ class PurchaseOrderServiceTest {
      */
     @Getter
     private static class SaveService implements SavePurchaseOrderPort {
-        private PurchaseOrder purchaseOrder;
+        private boolean verifyCall;
 
         @Override
         public void save(PurchaseOrder purchaseOrder) {
             System.out.println("Saving purchase order with id: " + purchaseOrder.getOrderId());
+            System.out.println("Saving purchase order amount: " + purchaseOrder.getTotalAmount());
             System.out.println("Saving purchase order status: " + purchaseOrder.getOrderStatus());
-            this.purchaseOrder = purchaseOrder;
+            verifyCall = true;
         }
     }
 }
