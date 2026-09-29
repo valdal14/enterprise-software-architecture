@@ -19,7 +19,11 @@ public class PurchaseOrderService implements ApprovePurchaseOrderUseCase {
     public void execute(UUID orderId, BigDecimal seasonalBudget) {
         Optional<PurchaseOrder> orderStored = loadPurchaseOrderPort.load(orderId);
         if (orderStored.isPresent()) {
+            // get the order
             PurchaseOrder purchaseOrder = orderStored.get();
+            // approve it
+            purchaseOrder.approve(seasonalBudget);
+            // save it
             savePurchaseOrderPort.save(purchaseOrder);
         } else {
             throw new IllegalArgumentException("Order not found");
