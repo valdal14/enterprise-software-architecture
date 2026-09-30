@@ -4,6 +4,7 @@ import com.rms.impactanalytics.application.port.out.LoadExportJobPort;
 import com.rms.impactanalytics.application.port.out.SaveExportJobPort;
 import com.rms.impactanalytics.domain.ExportJob;
 import com.rms.impactanalytics.domain.ExportStatus;
+import com.rms.impactanalytics.domain.InvalidJobStateException;
 import lombok.Getter;
 import org.junit.jupiter.api.Test;
 
@@ -42,8 +43,15 @@ class ExportJobServiceTest {
     }
 
     @Test
-    void executeSuccessfullyLoadAndMarkTheStateOfTheExportStatusToInProgress() {
-
+    void executeThrowsInternallyWhenExportJobStatusIsNotPending() {
+        // ARRANGE
+        boolean mustFail = true;
+        boolean mustThrow = false;
+        ExportJob expectedExportJob = new ExportJob(UUID.randomUUID(), "PURCHASE_ORDER", ExportStatus.FAILED);
+        LoadExportJobPortImpl load = new LoadExportJobPortImpl(mustFail, mustThrow);
+        ExportJobService sut = new ExportJobService(load, new SaveExportJobPortImpl());
+        // ACT & ASSERT
+        assertThrows(InvalidJobStateException.class, () -> sut.execute(expectedExportJob.getJobId()));
     }
 
     /**
