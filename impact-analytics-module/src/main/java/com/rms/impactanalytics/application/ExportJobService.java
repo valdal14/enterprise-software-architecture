@@ -22,7 +22,7 @@ public class ExportJobService implements TriggerExportJobUseCase {
             job.markInProgress();
             saveInterface.save(job);
         } else {
-            throw new IllegalStateException("Could not find any export job with id: " + jobId.toString());
+            throw new IllegalArgumentException("Could not find any export job with id: " + jobId.toString());
         }
     }
 }

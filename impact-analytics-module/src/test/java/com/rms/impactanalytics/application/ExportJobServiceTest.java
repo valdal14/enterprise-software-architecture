@@ -19,13 +19,26 @@ class ExportJobServiceTest {
     void executeSuccessfullyLoadTheExportJob() {
         // ARRANGE
         boolean mustFail = false;
+        boolean mustThrow = false;
         ExportJob expectedExportJob = new ExportJob(UUID.randomUUID(), "PURCHASE_ORDER", ExportStatus.PENDING);
-        LoadExportJobPortImpl load = new LoadExportJobPortImpl(mustFail);
+        LoadExportJobPortImpl load = new LoadExportJobPortImpl(mustFail, mustThrow);
         ExportJobService sut = new ExportJobService(load, new SaveExportJobPortImpl());
         // ACT
         sut.execute(expectedExportJob.getJobId());
-        // VERIFY
+        // ASSERT & VERIFY
         assertTrue(load.verifyCall);
+    }
+
+    @Test
+    void executeThrowsWhenExportJobIsNotPresent() {
+        // ARRANGE
+        boolean mustFail = false;
+        boolean mustThrow = true;
+        ExportJob expectedExportJob = new ExportJob(UUID.randomUUID(), "PURCHASE_ORDER", ExportStatus.PENDING);
+        LoadExportJobPortImpl load = new LoadExportJobPortImpl(mustFail, mustThrow);
+        ExportJobService sut = new ExportJobService(load, new SaveExportJobPortImpl());
+        // ACT & ASSERT
+        assertThrows(IllegalArgumentException.class, () -> sut.execute(expectedExportJob.getJobId()));
     }
 
     @Test
@@ -41,9 +54,11 @@ class ExportJobServiceTest {
     private static class LoadExportJobPortImpl implements LoadExportJobPort {
         private final boolean mustFail;
         private boolean verifyCall;
+        private final boolean mustThrow;
 
-        public LoadExportJobPortImpl(boolean mustFail) {
+        public LoadExportJobPortImpl(boolean mustFail,  boolean mustThrow) {
             this.mustFail = mustFail;
+            this.mustThrow = mustThrow;
         }
 
         @Override
@@ -52,6 +67,8 @@ class ExportJobServiceTest {
 
             if (mustFail) {
                 return Optional.of(new ExportJob(UUID.randomUUID(), "PURCHASE_ORDER", ExportStatus.COMPLETED));
+            } else if (mustThrow) {
+                return Optional.empty();
             } else {
                 return Optional.of(new ExportJob(UUID.randomUUID(), "PURCHASE_ORDER", ExportStatus.PENDING));
             }
