@@ -54,6 +54,25 @@ class ExportJobServiceTest {
         assertThrows(InvalidJobStateException.class, () -> sut.execute(expectedExportJob.getJobId()));
     }
 
+    @Test
+    void executeSuccessfullyLoadAndSaveTheExportJob() {
+        // ARRANGE
+        boolean mustFail = false;
+        boolean mustThrow = false;
+        ExportJob expectedExportJob = new ExportJob(UUID.randomUUID(), "PURCHASE_ORDER", ExportStatus.PENDING);
+        LoadExportJobPortImpl load = new LoadExportJobPortImpl(mustFail, mustThrow);
+        SaveExportJobPortImpl save = new SaveExportJobPortImpl();
+        ExportJobService sut = new ExportJobService(load, save);
+        // ACT
+        sut.execute(expectedExportJob.getJobId());
+        // ASSERT & VERIFY
+        assertAll(
+                ()-> assertTrue(load.verifyCall),
+                ()-> assertTrue(save.isVerifyCall()),
+                () -> assertEquals(ExportStatus.IN_PROGRESS, save.capturedExportJob.getStatus())
+        );
+    }
+
     /**
      * Concrete helper mocked class that implements LoadExportJobPort
      * and the load method
@@ -87,10 +106,15 @@ class ExportJobServiceTest {
      * Concrete helper mocked class that implements SaveExportJobPort
      * and the save method
      */
+    @Getter
     private static class SaveExportJobPortImpl implements SaveExportJobPort {
+        private ExportJob capturedExportJob;
+        private boolean verifyCall;
+
         @Override
         public void save(ExportJob exportJob) {
-
+            this.capturedExportJob = exportJob;
+            this.verifyCall = true;
         }
     }
 }
