@@ -4,6 +4,7 @@ import com.rms.impactanalytics.domain.ExportJob;
 import com.rms.impactanalytics.domain.ExportStatus;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -66,5 +67,24 @@ class ExportJobPersistenceAdapterTest {
 
     @Test
     void save() {
+        // ARRANGE
+        ExportJob job = new ExportJob(UUID.randomUUID(), "PURCHASE_ORDER", ExportStatus.PENDING);
+        // Set up the captor to intercept the JPA entity
+        ArgumentCaptor<ExportJobJpaEntity> entityCaptor= ArgumentCaptor.forClass(ExportJobJpaEntity.class);
+
+        // ACT
+        adapter.save(job);
+        // VERIFY
+        verify(repository).save(entityCaptor.capture());
+
+        // Extract the captured entity
+        ExportJobJpaEntity entity = entityCaptor.getValue();
+
+        // ASSERT
+        assertAll(
+                ()-> assertEquals(job.getJobId(), entity.getJobId()),
+                ()-> assertEquals(job.getExportType(), entity.getExportType()),
+                ()-> assertEquals(job.getStatus(), entity.getStatus())
+        );
     }
 }

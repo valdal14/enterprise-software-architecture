@@ -26,6 +26,16 @@ public class ExportJobPersistenceAdapter implements LoadExportJobPort,  SaveExpo
 
     @Override
     public void save(ExportJob exportJob) {
+        ExportJobJpaEntity entity = repository.findByJobId(exportJob.getJobId())
+                        .orElseGet(() -> new ExportJobJpaEntity(
+                                exportJob.getJobId(),
+                                exportJob.getExportType(),
+                                exportJob.getStatus()
+                        ));
+        // Update the state with the value from the exportJob
+        entity.setExportType(exportJob.getExportType());
+        entity.setStatus(exportJob.getStatus());
 
+        repository.save(entity);
     }
 }
