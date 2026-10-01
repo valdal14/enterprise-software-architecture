@@ -6,5 +6,5 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface ExportJobJpaRepository extends JpaRepository<ExportJobJpaEntity, UUID> {
-    Optional<ExportJobJpaEntity> findByJobId(UUID orderId);
+    Optional<ExportJobJpaEntity> findByJobId(UUID jobId);
 }
