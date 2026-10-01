@@ -53,6 +53,18 @@ class ExportJobPersistenceAdapterTest {
     }
 
     @Test
+    void loadReturnsAnEmptyOptionalWhenTheJobIdIsNotFound() {
+        ExportJob exportJob = new ExportJob(UUID.randomUUID(), "PURCHASE_ORDER", ExportStatus.PENDING);
+        // Mock the dependency (repository)
+        when(repository.findByJobId(exportJob.getJobId())).thenReturn(Optional.empty());
+        // ACT & ASSERT
+        Optional<ExportJob> actualExportJob = adapter.load(exportJob.getJobId());
+        assertFalse(actualExportJob.isPresent());
+        // VERIFY
+        verify(repository).findByJobId(exportJob.getJobId());
+    }
+
+    @Test
     void save() {
     }
 }

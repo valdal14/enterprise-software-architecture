@@ -16,11 +16,11 @@ public class ExportJobPersistenceAdapter implements LoadExportJobPort,  SaveExpo
 
     @Override
     public Optional<ExportJob> load(UUID jobId) {
-        Optional<ExportJobJpaEntity> entity = repository.findByJobId(jobId);
-        return entity.map(exportJobJpaEntity -> new ExportJob(
-                exportJobJpaEntity.getJobId(),
-                exportJobJpaEntity.getExportType(),
-                exportJobJpaEntity.getStatus()
+        return repository.findByJobId(jobId)
+                .map(exportJobJpaEntity -> new ExportJob(
+                        exportJobJpaEntity.getJobId(),
+                        exportJobJpaEntity.getExportType(),
+                        exportJobJpaEntity.getStatus()
         ));
     }
 
