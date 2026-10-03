@@ -7,12 +7,16 @@ import com.rms.purchaseorder.domain.PurchaseOrder;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.RestClient;
 
 import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 class PurchaseOrderServiceTest {
 
@@ -21,7 +25,8 @@ class PurchaseOrderServiceTest {
         // ARRANGE
         UUID orderId = UUID.randomUUID();
         BigDecimal orderAmount = BigDecimal.valueOf(300);
-        PurchaseOrderService service = makeSUT(new LoadService(false), new SaveService());
+        RestClient networkClient = mock(RestClient.class);
+        PurchaseOrderService service = makeSUT(new LoadService(false), new SaveService(), networkClient);
         // ACT & ASSERT
         assertThrows(IllegalArgumentException.class, () -> service.execute(orderId,  orderAmount));
     }
@@ -35,16 +40,36 @@ class PurchaseOrderServiceTest {
 
         SaveService saveService = new SaveService();
 
-        PurchaseOrderService service = makeSUT(new LoadService(true), saveService);
+        // Create explicit mocks for each step of the fluent chain
+        RestClient mockClient = mock(RestClient.class);
+        RestClient.RequestBodyUriSpec mockUriSpec = mock(RestClient.RequestBodyUriSpec.class);
+        RestClient.RequestBodySpec mockBodySpec = mock(RestClient.RequestBodySpec.class);
+        RestClient.ResponseSpec mockResponseSpec = mock(RestClient.ResponseSpec.class);
+
+        // Wire the chain together to return the next mock in sequence
+        when(mockClient.post()).thenReturn(mockUriSpec);
+        // Using (Object) any() safely bypasses Mockito's vararg matching issues
+        when(mockUriSpec.uri(anyString(), (Object) any())).thenReturn(mockBodySpec);
+        when(mockBodySpec.accept(any(MediaType.class))).thenReturn(mockBodySpec);
+        when(mockBodySpec.retrieve()).thenReturn(mockResponseSpec);
+        when(mockResponseSpec.toEntity(PurchaseOrder.class)).thenReturn(ResponseEntity.ok().build());
+
+        PurchaseOrderService service = makeSUT(new LoadService(true), saveService, mockClient);
+
         // ACT
-        service.execute(expectedPurchaseOrder.getOrderId(),  expectedPurchaseOrder.getTotalAmount());
-        // VERIFY
+        service.execute(expectedPurchaseOrder.getOrderId(), expectedPurchaseOrder.getTotalAmount());
+
+        // ASSERT
         assertAll(
-                () -> assertTrue(saveService.verifyCall),
-                () -> assertEquals(expectedPurchaseOrder.getOrderId(), saveService.capturedOrder.getOrderId()),
-                () -> assertEquals(expectedPurchaseOrder.getTotalAmount(), saveService.capturedOrder.getTotalAmount()),
-                () -> assertEquals(expectedPurchaseOrder.getOrderStatus(), saveService.capturedOrder.getOrderStatus())
+                () -> assertTrue(saveService.isVerifyCall()),
+                () -> assertEquals(expectedPurchaseOrder.getOrderId(), saveService.getCapturedOrder().getOrderId()),
+                () -> assertEquals(expectedPurchaseOrder.getTotalAmount(), saveService.getCapturedOrder().getTotalAmount()),
+                () -> assertEquals(expectedPurchaseOrder.getOrderStatus(), saveService.getCapturedOrder().getOrderStatus())
         );
+
+        // VERIFY
+        verify(mockClient, times(1)).post();
+        verify(mockUriSpec, times(1)).uri("/api/v1/export-jobs/{id}/trigger", expectedPurchaseOrder.getOrderId());
     }
 
     /**
@@ -53,8 +78,8 @@ class PurchaseOrderServiceTest {
      * @param save: A SavePurchaseOrderPort type
      * @return PurchaseOrderService
      */
-    private PurchaseOrderService makeSUT(LoadPurchaseOrderPort load, SavePurchaseOrderPort save) {
-        return new PurchaseOrderService(load, save);
+    private PurchaseOrderService makeSUT(LoadPurchaseOrderPort load, SavePurchaseOrderPort save, RestClient restClient) {
+        return new PurchaseOrderService(load, save, restClient);
     }
 
     /**
