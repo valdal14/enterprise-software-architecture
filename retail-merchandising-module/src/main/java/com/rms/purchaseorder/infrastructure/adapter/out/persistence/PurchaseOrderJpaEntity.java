@@ -23,10 +23,13 @@ public class PurchaseOrderJpaEntity {
     @Column(name = "ORDER_STATUS")
     @Enumerated(EnumType.STRING)
     private OrderStatus orderStatus;
+    @Column(name = "ANALYTICS_SYNCED")
+    private boolean analyticsSynced;
 
-    public PurchaseOrderJpaEntity(UUID orderId, BigDecimal totalAmount, OrderStatus orderStatus) {
+    public PurchaseOrderJpaEntity(UUID orderId, BigDecimal totalAmount, OrderStatus orderStatus, boolean analyticsSynced) {
         this.orderId = orderId;
         this.totalAmount = totalAmount;
         this.orderStatus = orderStatus;
+        this.analyticsSynced = analyticsSynced;
     }
 }

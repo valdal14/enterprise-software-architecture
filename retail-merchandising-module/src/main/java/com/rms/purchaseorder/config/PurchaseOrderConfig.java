@@ -1,9 +1,11 @@
 package com.rms.purchaseorder.config;
 
-import com.rms.purchaseorder.application.PurchaseOrderService;
+import com.rms.purchaseorder.application.ports.out.TriggerAnalyticsPort;
+import com.rms.purchaseorder.domain.PurchaseOrderService;
 import com.rms.purchaseorder.application.ports.in.ApprovePurchaseOrderUseCase;
 import com.rms.purchaseorder.application.ports.out.LoadPurchaseOrderPort;
 import com.rms.purchaseorder.application.ports.out.SavePurchaseOrderPort;
+import com.rms.purchaseorder.infrastructure.adapter.out.network.ImpactAnalyticsAdapter;
 import com.rms.purchaseorder.infrastructure.adapter.out.persistence.PurchaseOrderJpaRepository;
 import com.rms.purchaseorder.infrastructure.adapter.out.persistence.PurchaseOrderPersistenceAdapter;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -40,11 +42,16 @@ public class PurchaseOrderConfig {
     }
 
     @Bean
+    public ImpactAnalyticsAdapter  impactAnalyticsAdapter(RestClient restClient) {
+        return new ImpactAnalyticsAdapter(restClient);
+    }
+
+    @Bean
     public ApprovePurchaseOrderUseCase approvePurchaseOrderUseCase(
             LoadPurchaseOrderPort loadPurchaseOrderPort,
             SavePurchaseOrderPort savePurchaseOrderPort,
-            RestClient restClient) {
-        return new PurchaseOrderService(loadPurchaseOrderPort, savePurchaseOrderPort, restClient);
+            TriggerAnalyticsPort triggerAnalyticsPort) {
+        return new PurchaseOrderService(loadPurchaseOrderPort, savePurchaseOrderPort, triggerAnalyticsPort);
     }
 
     @Bean

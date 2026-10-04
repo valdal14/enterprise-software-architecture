@@ -1,22 +1,17 @@
-package com.rms.purchaseorder.application;
+package com.rms.purchaseorder.domain;
 
 import com.rms.purchaseorder.application.ports.out.LoadPurchaseOrderPort;
 import com.rms.purchaseorder.application.ports.out.SavePurchaseOrderPort;
-import com.rms.purchaseorder.domain.OrderStatus;
-import com.rms.purchaseorder.domain.PurchaseOrder;
+import com.rms.purchaseorder.application.ports.out.TriggerAnalyticsPort;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.junit.jupiter.api.Test;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.client.RestClient;
 
 import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
 
 class PurchaseOrderServiceTest {
 
@@ -25,8 +20,7 @@ class PurchaseOrderServiceTest {
         // ARRANGE
         UUID orderId = UUID.randomUUID();
         BigDecimal orderAmount = BigDecimal.valueOf(300);
-        RestClient networkClient = mock(RestClient.class);
-        PurchaseOrderService service = makeSUT(new LoadService(false), new SaveService(), networkClient);
+        PurchaseOrderService service = makeSUT(new LoadService(false), new SaveService(), new AnalyticsAdapter(false));
         // ACT & ASSERT
         assertThrows(IllegalArgumentException.class, () -> service.execute(orderId,  orderAmount));
     }
@@ -37,28 +31,12 @@ class PurchaseOrderServiceTest {
         UUID orderId = UUID.randomUUID();
         BigDecimal orderAmount = BigDecimal.valueOf(200);
         PurchaseOrder expectedPurchaseOrder = new PurchaseOrder(orderId, orderAmount, OrderStatus.APPROVED);
-
         SaveService saveService = new SaveService();
+        AnalyticsAdapter  analyticsAdapter = new AnalyticsAdapter(false);
 
-        // Create explicit mocks for each step of the fluent chain
-        RestClient mockClient = mock(RestClient.class);
-        RestClient.RequestBodyUriSpec mockUriSpec = mock(RestClient.RequestBodyUriSpec.class);
-        RestClient.RequestBodySpec mockBodySpec = mock(RestClient.RequestBodySpec.class);
-        RestClient.ResponseSpec mockResponseSpec = mock(RestClient.ResponseSpec.class);
-
-        // Wire the chain together to return the next mock in sequence
-        when(mockClient.post()).thenReturn(mockUriSpec);
-        // Using (Object) any() safely bypasses Mockito's vararg matching issues
-        when(mockUriSpec.uri(anyString(), (Object) any())).thenReturn(mockBodySpec);
-        when(mockBodySpec.accept(any(MediaType.class))).thenReturn(mockBodySpec);
-        when(mockBodySpec.retrieve()).thenReturn(mockResponseSpec);
-        when(mockResponseSpec.toEntity(PurchaseOrder.class)).thenReturn(ResponseEntity.ok().build());
-
-        PurchaseOrderService service = makeSUT(new LoadService(true), saveService, mockClient);
-
+        PurchaseOrderService service = makeSUT(new LoadService(true), saveService, analyticsAdapter);
         // ACT
         service.execute(expectedPurchaseOrder.getOrderId(), expectedPurchaseOrder.getTotalAmount());
-
         // ASSERT
         assertAll(
                 () -> assertTrue(saveService.isVerifyCall()),
@@ -68,8 +46,25 @@ class PurchaseOrderServiceTest {
         );
 
         // VERIFY
-        verify(mockClient, times(1)).post();
-        verify(mockUriSpec, times(1)).uri("/api/v1/export-jobs/{id}/trigger", expectedPurchaseOrder.getOrderId());
+        assertTrue(analyticsAdapter.verifyTriggerCall);
+        assertFalse(analyticsAdapter.verifyFallbackCall);
+    }
+
+    @Test
+    void executeProcessTheOrderAndFailThePost() {
+        // ARRANGE
+        UUID orderId = UUID.randomUUID();
+        BigDecimal orderAmount = BigDecimal.valueOf(200);
+        PurchaseOrder expectedPurchaseOrder = new PurchaseOrder(orderId, orderAmount, OrderStatus.DRAFT);
+        SaveService saveService = new SaveService();
+        AnalyticsAdapter  analyticsAdapter = new AnalyticsAdapter(true);
+
+        PurchaseOrderService service = makeSUT(new LoadService(true), saveService, analyticsAdapter);
+        // ACT
+        service.execute(expectedPurchaseOrder.getOrderId(), expectedPurchaseOrder.getTotalAmount());
+        // VERIFY
+        assertTrue(analyticsAdapter.verifyTriggerCall);
+        assertTrue(analyticsAdapter.verifyFallbackCall);
     }
 
     /**
@@ -78,12 +73,12 @@ class PurchaseOrderServiceTest {
      * @param save: A SavePurchaseOrderPort type
      * @return PurchaseOrderService
      */
-    private PurchaseOrderService makeSUT(LoadPurchaseOrderPort load, SavePurchaseOrderPort save, RestClient restClient) {
-        return new PurchaseOrderService(load, save, restClient);
+    private PurchaseOrderService makeSUT(LoadPurchaseOrderPort load, SavePurchaseOrderPort save, TriggerAnalyticsPort analytics) {
+        return new PurchaseOrderService(load, save, analytics);
     }
 
     /**
-     * Helper Mocked LoadService class
+     * Helper Mocked LoadPurchaseOrderPort class
      */
     @AllArgsConstructor
     private static class LoadService implements LoadPurchaseOrderPort {
@@ -100,7 +95,7 @@ class PurchaseOrderServiceTest {
     }
 
     /**
-     * Helper Mocked SaveService class
+     * Helper Mocked SavePurchaseOrderPort class
      */
     @Getter
     private static class SaveService implements SavePurchaseOrderPort {
@@ -111,6 +106,37 @@ class PurchaseOrderServiceTest {
         public void save(PurchaseOrder purchaseOrder) {
             verifyCall = true;
             capturedOrder = purchaseOrder;
+        }
+    }
+
+    /**
+     * Helper Mocked TriggerAnalyticsPort class
+     */
+    @Getter
+    private static class AnalyticsAdapter implements TriggerAnalyticsPort {
+        private boolean verifyTriggerCall;
+        private boolean verifyFallbackCall;
+        private final boolean shouldFail;
+
+        public AnalyticsAdapter(boolean shouldFail) {
+            this.shouldFail = shouldFail;
+        }
+
+        @Override
+        public boolean trigger(UUID orderId) {
+            // Simulate failed or success post request
+            verifyTriggerCall  = true;
+
+            if (shouldFail) {
+                return triggerFallback(orderId, new Exception("Trigger Request to ImpactAnalytics Service failed"));
+            } else
+                return true;
+            }
+
+        public boolean triggerFallback(UUID orderId, Throwable t) {
+            verifyFallbackCall = true;
+            System.out.println("ImpactAnalyticsAdapter triggerFallback: " + t.getMessage() + " for orderId: " + orderId);
+            return false;
         }
     }
 }
