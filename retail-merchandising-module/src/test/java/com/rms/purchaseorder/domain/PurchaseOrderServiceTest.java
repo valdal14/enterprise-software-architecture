@@ -8,6 +8,8 @@ import lombok.Getter;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -67,6 +69,16 @@ class PurchaseOrderServiceTest {
         assertTrue(analyticsAdapter.verifyFallbackCall);
     }
 
+    @Test
+    void loadUnsyncedApprovedOrdersReturnsTheCorrectNumberOfOrders() {
+        List<PurchaseOrder> expectedList = new ArrayList<>();
+        expectedList.add(new PurchaseOrder(UUID.randomUUID(), BigDecimal.valueOf(200), OrderStatus.APPROVED));
+
+        LoadService loadService = new LoadService(false);
+        List<PurchaseOrder> orders = loadService.loadUnsyncedApprovedOrders(OrderStatus.APPROVED, false);
+        assertEquals(expectedList.size(), orders.size());
+    }
+
     /**
      * Helper method used to create the system under test
      * @param load: A LoadPurchaseOrderPort type
@@ -91,6 +103,17 @@ class PurchaseOrderServiceTest {
             } else {
                 return Optional.empty();
             }
+        }
+
+        @Override
+        public List<PurchaseOrder> loadUnsyncedApprovedOrders(OrderStatus orderStatus, boolean synced) {
+            List<PurchaseOrder> purchaseOrders = new ArrayList<>();
+            purchaseOrders.add(new PurchaseOrder(UUID.randomUUID(), BigDecimal.valueOf(200), OrderStatus.APPROVED));
+            purchaseOrders.add(new PurchaseOrder(UUID.randomUUID(), BigDecimal.valueOf(300), OrderStatus.DRAFT));
+            purchaseOrders.add(new PurchaseOrder(UUID.randomUUID(), BigDecimal.valueOf(400), OrderStatus.DRAFT));
+            return purchaseOrders.stream()
+                    .filter(po -> po.getOrderStatus().equals(orderStatus) && po.isAnalyticsSynced() == synced)
+                    .toList();
         }
     }
 

@@ -10,8 +10,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.verify;
@@ -88,5 +87,32 @@ class PurchaseOrderPersistenceAdapterTest {
                 ()-> assertEquals(amount, capturedEntity.getTotalAmount()),
                 ()-> assertEquals(orderStatus, capturedEntity.getOrderStatus())
         );
+    }
+
+    @Test
+    void loadUnsyncedApprovedOrders() {
+        // ARRANGE
+        List<PurchaseOrderJpaEntity> expectedEntities = new ArrayList<>();
+        // Make individual purchase orders
+        PurchaseOrderJpaEntity mc1 = new PurchaseOrderJpaEntity();
+        mc1.setId(1L);
+        mc1.setOrderId(UUID.randomUUID());
+        mc1.setTotalAmount(BigDecimal.valueOf(200));
+        mc1.setOrderStatus(OrderStatus.APPROVED);
+        PurchaseOrderJpaEntity mc2 = new PurchaseOrderJpaEntity();
+        mc2.setId(2L);
+        mc2.setOrderId(UUID.randomUUID());
+        mc2.setTotalAmount(BigDecimal.valueOf(300));
+        mc2.setOrderStatus(OrderStatus.APPROVED);
+
+        expectedEntities.add(mc1);
+        expectedEntities.add(mc2);
+
+        when(repository.findAllByOrderStatusAndAnalyticsSynced(OrderStatus.APPROVED, false)).thenReturn(expectedEntities);
+
+        // ACT
+        List<PurchaseOrder> orders = adapter.loadUnsyncedApprovedOrders(OrderStatus.APPROVED, false);
+        // ASSERT
+        assertEquals(expectedEntities.size(), orders.size());
     }
 }

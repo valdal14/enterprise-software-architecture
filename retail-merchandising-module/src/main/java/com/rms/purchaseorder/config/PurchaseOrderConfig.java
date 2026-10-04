@@ -14,9 +14,11 @@ import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.web.client.RestClient;
 
 @Configuration
+@EnableScheduling
 public class PurchaseOrderConfig {
 
     // A clean, non-intercepted builder for Eureka's internal use

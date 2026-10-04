@@ -4,7 +4,6 @@ import com.rms.purchaseorder.application.ports.out.TriggerAnalyticsPort;
 import com.rms.purchaseorder.domain.PurchaseOrder;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.AllArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.web.client.RestClient;
@@ -27,7 +26,7 @@ public class ImpactAnalyticsAdapter implements TriggerAnalyticsPort {
                 .toEntity(PurchaseOrder.class)
                 .getStatusCode();
 
-        return code == HttpStatus.ACCEPTED;
+        return code.is2xxSuccessful();
     }
 
     public boolean triggerFallback(UUID orderId, Throwable t) {
