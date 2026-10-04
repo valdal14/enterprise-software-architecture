@@ -1,26 +1,23 @@
-package com.rms.purchaseorder.application;
+package com.rms.purchaseorder.domain;
 
 import com.rms.purchaseorder.application.ports.in.ApprovePurchaseOrderUseCase;
 import com.rms.purchaseorder.application.ports.out.LoadPurchaseOrderPort;
 import com.rms.purchaseorder.application.ports.out.SavePurchaseOrderPort;
-import com.rms.purchaseorder.domain.PurchaseOrder;
-import org.springframework.http.MediaType;
-import org.springframework.web.client.RestClient;
+import com.rms.purchaseorder.application.ports.out.TriggerAnalyticsPort;
 
 import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.UUID;
 
 public class PurchaseOrderService implements ApprovePurchaseOrderUseCase {
-    private final static String IA_URL_PATH = "/api/v1/export-jobs/{id}/trigger";
     private final LoadPurchaseOrderPort loadPurchaseOrderPort;
     private final SavePurchaseOrderPort savePurchaseOrderPort;
-    private final RestClient restClient;
+    private final TriggerAnalyticsPort triggerAnalyticsPort;
 
-    public PurchaseOrderService(LoadPurchaseOrderPort load, SavePurchaseOrderPort save, RestClient restClient) {
+    public PurchaseOrderService(LoadPurchaseOrderPort load, SavePurchaseOrderPort save, TriggerAnalyticsPort triggerAnalyticsPort) {
         this.loadPurchaseOrderPort = load;
         this.savePurchaseOrderPort = save;
-        this.restClient = restClient;
+        this.triggerAnalyticsPort = triggerAnalyticsPort;
     }
 
     @Override
@@ -31,14 +28,11 @@ public class PurchaseOrderService implements ApprovePurchaseOrderUseCase {
             PurchaseOrder purchaseOrder = orderStored.get();
             // approve it
             purchaseOrder.approve(seasonalBudget);
+            // send the request to impact analytic service
+            boolean syncSuccess = triggerAnalyticsPort.trigger(orderId);
+            purchaseOrder.setAnalyticsSynced(syncSuccess);
             // save it
             savePurchaseOrderPort.save(purchaseOrder);
-            // send the request to impact analytic service
-            restClient.post()
-                    .uri(IA_URL_PATH, orderId)
-                    .accept(MediaType.APPLICATION_JSON)
-                    .retrieve()
-                    .toEntity(PurchaseOrder.class);
         } else {
             throw new IllegalArgumentException("Order not found");
         }

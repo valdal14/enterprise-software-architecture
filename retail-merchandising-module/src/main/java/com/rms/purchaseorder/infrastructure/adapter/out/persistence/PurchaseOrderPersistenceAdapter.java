@@ -32,7 +32,8 @@ public class PurchaseOrderPersistenceAdapter implements LoadPurchaseOrderPort, S
                 .orElseGet(() -> new PurchaseOrderJpaEntity(
                         purchaseOrder.getOrderId(),
                         purchaseOrder.getTotalAmount(),
-                        purchaseOrder.getOrderStatus()
+                        purchaseOrder.getOrderStatus(),
+                        purchaseOrder.isAnalyticsSynced()
                 ));
 
         // Update the state (crucial for transitioning from DRAFT to APPROVED/REJECTED)
